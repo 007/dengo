@@ -52,44 +52,44 @@ resource "random_id" "lambda" {
   byte_length = 8
 }
 
-# resource "aws_lambda_function" "auth" {
-#   filename         = "${path.module}/data/lambda_handler.zip"
-#   function_name    = random_id.lambda.hex
-#   role             = aws_iam_role.lambda_role.arn
-#   handler          = "lambda_handler.lambda_handler"
-#   source_code_hash = filebase64sha256("${path.module}/data/lambda_handler.zip")
-#   runtime          = "python3.12"
-#   publish          = true
-# 
-#   environment {
-#     variables = {
-#       OIDC_CLIENT_ID          = var.oidc_client_id
-#       OIDC_ENDPOINT           = var.oidc_endpoint
-#       SIGNING_KEY_ID          = aws_cloudfront_public_key.signing[var.current_key].id
-#       SIGNING_KEY_SECRET_PATH = aws_secretsmanager_secret.signing.arn
-#     }
-#   }
-#   timeout       = 5
-#   memory_size   = 128
-#   architectures = ["arm64"]
-# }
+resource "aws_lambda_function" "auth" {
+  filename         = "${path.module}/data/lambda_handler.zip"
+  function_name    = random_id.lambda.hex
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "lambda_handler.lambda_handler"
+  source_code_hash = filebase64sha256("${path.module}/data/lambda_handler.zip")
+  runtime          = "python3.12"
+  publish          = true
 
-# resource "aws_lambda_alias" "auth" {
-#   name             = "cloudfront"
-#   function_name    = aws_lambda_function.auth.function_name
-#   function_version = aws_lambda_function.auth.version
-# }
-# 
-# resource "aws_lambda_function_url" "auth" {
-#   function_name      = aws_lambda_function.auth.function_name
-#   qualifier          = aws_lambda_alias.auth.name
-#   authorization_type = "NONE"
-# }
-# 
-# resource "aws_cloudwatch_log_group" "auth" {
-#   name              = "/aws/lambda/${aws_lambda_function.auth.function_name}"
-#   retention_in_days = 7
-#   lifecycle {
-#     prevent_destroy = false
-#   }
-# }
+  environment {
+    variables = {
+      OIDC_CLIENT_ID          = var.oidc_client_id
+      OIDC_ENDPOINT           = var.oidc_endpoint
+      SIGNING_KEY_ID          = aws_cloudfront_public_key.signing[var.current_key].id
+      SIGNING_KEY_SECRET_PATH = aws_secretsmanager_secret.signing.arn
+    }
+  }
+  timeout       = 5
+  memory_size   = 128
+  architectures = ["arm64"]
+}
+
+resource "aws_lambda_alias" "auth" {
+  name             = "cloudfront"
+  function_name    = aws_lambda_function.auth.function_name
+  function_version = aws_lambda_function.auth.version
+}
+
+resource "aws_lambda_function_url" "auth" {
+  function_name      = aws_lambda_function.auth.function_name
+  qualifier          = aws_lambda_alias.auth.name
+  authorization_type = "NONE"
+}
+
+resource "aws_cloudwatch_log_group" "auth" {
+  name              = "/aws/lambda/${aws_lambda_function.auth.function_name}"
+  retention_in_days = 7
+  lifecycle {
+    prevent_destroy = false
+  }
+}

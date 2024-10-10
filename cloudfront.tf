@@ -5,7 +5,7 @@ locals {
 
   # from https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html
   # tflint-ignore: terraform_naming_convention
-  # CFOriginRequestPolicy_AllViewerHost = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  CFOriginRequestPolicy_AllViewerHost = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
 
   cf_target_origin_id = "origin-${aws_s3_bucket.origin.id}"
 }
@@ -51,22 +51,22 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
   }
 
-  # origin {
-  #   custom_origin_config {
-  #     http_port              = 80
-  #     https_port             = 443
-  #     origin_protocol_policy = "https-only"
-  #     origin_ssl_protocols   = ["TLSv1.2"]
-  #   }
-  #   connection_attempts = 3
-  #   connection_timeout  = 2
-  #   domain_name         = regex("(?:https://)([^/?#]*)", aws_lambda_function_url.auth.function_url)[0]
-  #   origin_id           = "auth"
-  #   custom_header {
-  #     name  = "User-Agent"
-  #     value = random_id.bucket_access_header.hex
-  #   }
-  # }
+  origin {
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+    connection_attempts = 3
+    connection_timeout  = 2
+    domain_name         = regex("(?:https://)([^/?#]*)", aws_lambda_function_url.auth.function_url)[0]
+    origin_id           = "auth"
+    custom_header {
+      name  = "User-Agent"
+      value = random_id.bucket_access_header.hex
+    }
+  }
 
   aliases             = [var.domain_name]
   comment             = "${var.domain_name} distribution"
@@ -103,15 +103,15 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     target_origin_id       = local.cf_target_origin_id
   }
 
-  # ordered_cache_behavior {
-  #   allowed_methods          = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
-  #   cached_methods           = ["GET", "HEAD"]
-  #   cache_policy_id          = local.CFCachePolicy_CachingDisabled
-  #   origin_request_policy_id = local.CFOriginRequestPolicy_AllViewerHost
-  #   path_pattern             = "auth"
-  #   viewer_protocol_policy   = "redirect-to-https"
-  #   target_origin_id         = "auth"
-  # }
+  ordered_cache_behavior {
+    allowed_methods          = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+    cached_methods           = ["GET", "HEAD"]
+    cache_policy_id          = local.CFCachePolicy_CachingDisabled
+    origin_request_policy_id = local.CFOriginRequestPolicy_AllViewerHost
+    path_pattern             = "auth"
+    viewer_protocol_policy   = "redirect-to-https"
+    target_origin_id         = "auth"
+  }
 
   restrictions {
     geo_restriction {
