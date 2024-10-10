@@ -1,0 +1,41 @@
+<html>
+  <title>redirect</title>
+  <head>
+    <script>
+      const auth_url = 'https://${endpoint}/authorize';
+      const client_id = '${client_id}';
+      const organization_id = '${organization_id}';
+      (function() {
+        function rand_nonce() {
+          var arr = new Uint8Array(32);
+          window.crypto.getRandomValues(arr);
+          return Array.from(arr, dec => ('0' + dec.toString(16)).substr(-2)).join('');
+        }
+
+        const currentUrl = new URL(window.location.href);
+        const redirectUri = new URL('/auth', currentUrl.origin);
+        redirectUri.searchParams.set('target_path', currentUrl.pathname + currentUrl.search);
+
+        const authUrl = new URL(auth_url);
+        const state = rand_nonce();
+        const nonce = rand_nonce();
+
+        authUrl.searchParams.set('response_type', 'id_token');
+        authUrl.searchParams.set('response_mode', 'form_post');
+        authUrl.searchParams.set('client_id', client_id);
+        authUrl.searchParams.set('organization', organization_id);
+        authUrl.searchParams.set('redirect_uri', redirectUri.toString());
+        authUrl.searchParams.set('scope', 'openid email');
+        authUrl.searchParams.set('state', state);
+        authUrl.searchParams.set('nonce', nonce);
+
+        sessionStorage.setItem('oidc_state', state);
+        sessionStorage.setItem('oidc_nonce', nonce);
+
+        window.location.href = authUrl.toString();
+      })();
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
