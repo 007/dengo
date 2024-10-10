@@ -1,0 +1,41 @@
+name: Publish New Version
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      RELEASE:
+        description: 'Release version'
+        required: true
+        default: '0.0.1'
+
+jobs:
+  publish:
+    name: Build and Publish to Github
+    runs-on: ubuntu-latest
+    concurrency:
+      group: "publish"
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare
+        id: prep-env
+        run: ./data/gha-prep.sh
+
+      - name: Build
+        id: build-zip
+        run: ./data/gha-build.sh
+
+      - name: Package
+        id: package-tf
+        run: ./data/gha-package.sh
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{github.event.inputs.RELEASE}}
+          files: release/*
+          draft: true
