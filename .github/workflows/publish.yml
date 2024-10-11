@@ -24,7 +24,8 @@ jobs:
         run: ./data/gha-package.sh
       - name: Publish
         uses: softprops/action-gh-release@v2
-        draft: true
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref_name }}
-        files: release/*
+        with:
+          draft: true
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          files: release/*
