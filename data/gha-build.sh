@@ -12,19 +12,25 @@ DEPLOY_DIR=$(mktemp -d .deploy.XXX)
 
 trap 'rm -r "${BASE_DIR}/${DEPLOY_DIR}"' EXIT
 
-# in a container, pipx-installed poetry is /root/.local/bin/poetry
-export PATH="${PATH}:/root/.local/bin"
+# if we don't set this explicitly, assume it's GHA
+if [[ -z ${RUNNING_LOCALLY+x} ]] ; then
+  # in a container, pipx-installed poetry is /root/.local/bin/poetry
+  export PATH="${PATH}:/root/.local/bin"
 
-# activate pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-pyenv global 3.12
+  # activate pyenv
+  export PYENV_ROOT="$HOME/.pyenv"
+  [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init -)"
+  pyenv global 3.12
+  PIP_CMD=pip
+else
+  PIP_CMD=pip3
+fi
 
 poetry export \
   --format=requirements.txt \
   --without-hashes | \
-  pip install \
+  ${PIP_CMD} install \
     -r /dev/stdin \
     --target "${DEPLOY_DIR}" \
     --platform manylinux2014_aarch64 \
