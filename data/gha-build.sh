@@ -53,7 +53,9 @@ find "${DEPLOY_DIR}" -type f -exec touch -c -t 0101010101 {} +
 
 cd "${DEPLOY_DIR}"
 rm -f "${BASE_DIR}/lambda_handler.zip"
-zip -9rXDv "${BASE_DIR}/lambda_handler.zip" .
+# zip sorts by default in some implementations, but not all
+# explicit find-and-sort is more portable and reliable
+find . -type f -print0 | sort -z | xargs -0 zip -9rXDv "${BASE_DIR}/lambda_handler.zip"
 cd "${BASE_DIR}"
 
 # checks / debugging info for idempotency
