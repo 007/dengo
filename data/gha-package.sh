@@ -38,7 +38,8 @@ unzip -lv terraform-aws-dengo.zip | sed 's/^/# /g' >> "terraform-aws-dengo.zip.s
 
 
 sha256sum lambda_handler.zip > "lambda_handler.zip.sha256"
-echo "" >> "lambda_handler.zip.sha256"
+echo "#" >> "lambda_handler.zip.sha256"
 echo "# Check with \"sha256sum --check --status lambda_handler.zip.sha256\"" >> "lambda_handler.zip.sha256"
-echo "" >> "lambda_handler.zip.sha256"
+echo "# source_code_hash = \"$(openssl dgst -binary -sha256 lambda_handler.zip | openssl base64 -A)\"" >> "lambda_handler.zip.sha256"
+echo "#" >> "lambda_handler.zip.sha256"
 unzip -lv lambda_handler.zip | sed 's/^/# /g' >> "lambda_handler.zip.sha256"
