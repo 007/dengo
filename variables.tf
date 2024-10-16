@@ -41,3 +41,9 @@ variable "oidc_org_id" {
   type        = string
   description = "Organization ID for OIDC authentication"
 }
+
+variable "signature_expiration_days" {
+  type        = number
+  description = "Number of days a session cookie will last"
+  default     = 1
+}
