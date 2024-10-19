@@ -9,9 +9,9 @@ import jwt
 import rsa
 from botocore.exceptions import ClientError
 
+jwks_uri = os.getenv("JWKS_URI", "TODO:REPLACEME")
 key_pair_id = os.getenv("SIGNING_KEY_ID", "TODO:REPLACEME")
 oidc_client_id = os.getenv("OIDC_CLIENT_ID", "TODO:REPLACEME")
-oidc_endpoint = os.getenv("OIDC_ENDPOINT", "TODO:REPLACEME")
 region = os.getenv("AWS_REGION", os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
 secret_path = os.getenv("SIGNING_KEY_SECRET_PATH", "TODO:REPLACEME")
 signature_expiration_days = int(os.getenv("SIGNATURE_EXPIRATION_DAYS", 1))
@@ -29,7 +29,7 @@ def load_cf_signing_key():
 
 
 def load_jwks_keys():
-    jwks_client = jwt.PyJWKClient(f"https://{oidc_endpoint}/.well-known/jwks.json")
+    jwks_client = jwt.PyJWKClient(jwks_uri)
     _ = jwks_client.fetch_data()
     return jwks_client
 

@@ -23,9 +23,8 @@ resource "aws_s3_object" "auth_redir" {
   key          = "auth_redir"
   content_type = "text/html"
   content = trimspace(templatefile("${path.module}/data/auth_redir.html", {
-    endpoint        = var.oidc_endpoint,
-    client_id       = var.oidc_client_id,
-    organization_id = var.oidc_org_id,
+    auth_endpoint = local.resolved_oidc_config.authorization_endpoint,
+    client_id     = var.oidc_client_id,
   }))
 }
 

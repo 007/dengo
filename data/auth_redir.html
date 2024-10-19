@@ -2,9 +2,8 @@
   <title>redirect</title>
   <head>
     <script>
-      const auth_url = 'https://${endpoint}/authorize';
+      const auth_url = '${auth_endpoint}';
       const client_id = '${client_id}';
-      const organization_id = '${organization_id}';
       (function() {
         function rand_nonce() {
           var arr = new Uint8Array(32);
@@ -14,7 +13,6 @@
 
         const currentUrl = new URL(window.location.href);
         const redirectUri = new URL('/auth', currentUrl.origin);
-        redirectUri.searchParams.set('target_path', currentUrl.pathname + currentUrl.search);
 
         const authUrl = new URL(auth_url);
         const state = rand_nonce();
@@ -23,7 +21,6 @@
         authUrl.searchParams.set('response_type', 'id_token');
         authUrl.searchParams.set('response_mode', 'form_post');
         authUrl.searchParams.set('client_id', client_id);
-        authUrl.searchParams.set('organization', organization_id);
         authUrl.searchParams.set('redirect_uri', redirectUri.toString());
         authUrl.searchParams.set('scope', 'openid email');
         authUrl.searchParams.set('state', state);
@@ -37,5 +34,6 @@
     </script>
   </head>
   <body>
+    <p>Redirecting... Please enable javascript if you are not automatically redirected.</p>
   </body>
 </html>

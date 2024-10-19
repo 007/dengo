@@ -27,19 +27,14 @@ variable "current_key" {
   default     = "2014-08-26"
 }
 
-variable "oidc_endpoint" {
-  description = "The OIDC endpoint to use for authentication"
+variable "oidc_config_endpoint" {
+  description = "The OIDC endpoint to use for config, usually `https://<oidc_provider>/.well-known/openid-configuration`"
   type        = string
 }
 
 variable "oidc_client_id" {
   type        = string
   description = "Client ID for OIDC authentication"
-}
-
-variable "oidc_org_id" {
-  type        = string
-  description = "Organization ID for OIDC authentication"
 }
 
 variable "signature_expiration_days" {

@@ -63,14 +63,14 @@ resource "aws_lambda_function" "auth" {
 
   environment {
     variables = {
+      JWKS_URI                  = local.resolved_oidc_config.jwks_uri
       OIDC_CLIENT_ID            = var.oidc_client_id
-      OIDC_ENDPOINT             = var.oidc_endpoint
+      SIGNATURE_EXPIRATION_DAYS = var.signature_expiration_days
       SIGNING_KEY_ID            = aws_cloudfront_public_key.signing[var.current_key].id
       SIGNING_KEY_SECRET_PATH   = aws_secretsmanager_secret.signing.arn
-      SIGNATURE_EXPIRATION_DAYS = var.signature_expiration_days
     }
   }
-  timeout       = 5
+  timeout       = 10
   memory_size   = 128
   architectures = ["arm64"]
 }
