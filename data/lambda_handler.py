@@ -66,6 +66,13 @@ def kv_to_cookies(headers):
     return cookies
 
 
+def encode_identity_cookie(identity):
+    signature = rsa.sign(identity.encode(), signing_key, "SHA-1")
+    signature = base64.b64encode(signature).decode()
+    sig_data = json.dumps({"identity": identity, "signature": signature}).encode("utf8")
+    return {"Dengo-Identity": cloudfront_urlsafe_b64(sig_data)}
+
+
 def set_redirect(request):
     params = urllib.parse.parse_qs(request.get("rawQueryString", ""))
     return_target = params.get("target_path", [""])[0]
@@ -99,6 +106,7 @@ def auth_handler(event, context):
         identity = check_oidc_auth(post_data.get("id_token", [""])[0])
         if identity is not None:
             cookies = gen_signature()
+            cookies.update(encode_identity_cookie(identity))
             response = {
                 "statusCode": 302,
                 "headers": {
