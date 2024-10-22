@@ -90,7 +90,7 @@ def check_auth(jwt_data):
     return False
 
 
-def lambda_handler(event, context):
+def auth_handler(event, context):
     response = {"statusCode": 401, "body": "Unauthorized"}
     if event.get("requestContext", {}).get("http", {}).get("method", "") == "POST":
         post_data = event.get("body", "")
