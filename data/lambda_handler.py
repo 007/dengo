@@ -59,7 +59,7 @@ def gen_signature():
     return headers
 
 
-def signature_to_cookies(headers):
+def kv_to_cookies(headers):
     cookies = []
     for k, v in headers.items():
         cookies.append(f"{k}={v}; Secure; HttpOnly")
@@ -75,19 +75,18 @@ def set_redirect(request):
     return f"/{return_target_safe}"
 
 
-def check_auth(jwt_data):
+def check_oidc_auth(jwt_data):
     try:
         signing_key = jwks_client.get_signing_key_from_jwt(jwt_data)
         data = jwt.decode(jwt_data, signing_key.key, algorithms=["RS256"], audience=oidc_client_id)
         if data.get("email_verified", False):
-            # can do data.get('email', 'unknown') to get email as desired
-            return True
+            return data["email"]
     except jwt.ExpiredSignatureError:
         pass
     except jwt.InvalidTokenError:
         pass
 
-    return False
+    return None
 
 
 def auth_handler(event, context):
@@ -97,14 +96,16 @@ def auth_handler(event, context):
         if event.get("isBase64Encoded", False):
             post_data = base64.b64decode(post_data).decode("utf8")
         post_data = urllib.parse.parse_qs(post_data)
-        if check_auth(post_data.get("id_token", [""])[0]):
+        identity = check_oidc_auth(post_data.get("id_token", [""])[0])
+        if identity is not None:
+            cookies = gen_signature()
             response = {
                 "statusCode": 302,
                 "headers": {
                     "Location": set_redirect(event),
                 },
                 "body": "",
-                "cookies": signature_to_cookies(gen_signature()),
+                "cookies": kv_to_cookies(cookies),
                 "isBase64Encoded": False,
             }
 
