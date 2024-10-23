@@ -121,14 +121,30 @@ def find_cookie(event, find_name):
     return None
 
 
+def event_post_data(event, unique=True):
+    return_data = {}
+    if event.get("requestContext", {}).get("http", {}).get("method", "") == "POST":
+        post_data = event.get("body", "")
+        if event.get("isBase64Encoded", False):
+            post_data = base64.b64decode(post_data).decode("utf8")
+        post_data = urllib.parse.parse_qs(post_data)
+        if not unique:
+            return post_data
+
+        for k, v in post_data.items():
+            return_data[k] = v[0]
+
+    return return_data
+
+
 def link_handler(event, context):
     response = {"statusCode": 403, "body": "Invalid link or you are not owner"}
     update_or_create = "failed"
     identity_cookie = find_cookie(event, "Dengo-Identity")
     identity = decode_identity_cookie(identity_cookie)
     if identity is not None:
-        print(event)
-        link_name = event.get("queryStringParameters", {}).get("name", "")
+        post_data = event_post_data(event)
+        link_name = post_data.get("name", "")
         session = boto3.session.Session()
         s3_client = session.client(service_name="s3", region_name=region)
 
@@ -152,7 +168,7 @@ def link_handler(event, context):
         # object doesn't exist, or user is the owner
         # we can take ownership and publish the link
         if ownership_verified:
-            link_url = event.get("queryStringParameters", {}).get("url", "")
+            link_url = post_data.get("url", "")
             link_body = f'Redirecting to <a href="{link_url}">{link_url}</a>'
             s3_client.put_object(
                 Body=link_body,
@@ -177,11 +193,8 @@ def link_handler(event, context):
 def auth_handler(event, context):
     response = {"statusCode": 401, "body": "Unauthorized"}
     if event.get("requestContext", {}).get("http", {}).get("method", "") == "POST":
-        post_data = event.get("body", "")
-        if event.get("isBase64Encoded", False):
-            post_data = base64.b64decode(post_data).decode("utf8")
-        post_data = urllib.parse.parse_qs(post_data)
-        identity = check_oidc_auth(post_data.get("id_token", [""])[0])
+        post_data = event_post_data(event)
+        identity = check_oidc_auth(post_data.get("id_token", ""))
         if identity is not None:
             cookies = gen_signature()
             cookies.update(encode_identity_cookie(identity))
