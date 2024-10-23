@@ -20,7 +20,7 @@ resource "aws_s3_object" "index_html" {
 resource "aws_s3_object" "auth_redir" {
   bucket = aws_s3_bucket.origin.id
 
-  key          = "auth_redir"
+  key          = "_/auth/redir"
   content_type = "text/html"
   content = trimspace(templatefile("${path.module}/data/auth_redir.html", {
     auth_endpoint = local.resolved_oidc_config.authorization_endpoint,

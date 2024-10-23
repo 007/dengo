@@ -100,14 +100,14 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     error_caching_min_ttl = 0
     error_code            = 403
     response_code         = 200
-    response_page_path    = "/auth_redir"
+    response_page_path    = "/_/auth/redir"
   }
 
   ordered_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
     cache_policy_id        = local.CFCachePolicy_CachingDisabled
-    path_pattern           = "auth_redir"
+    path_pattern           = "_/auth/redir"
     viewer_protocol_policy = "redirect-to-https"
     target_origin_id       = local.cf_target_origin_id
   }
