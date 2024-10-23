@@ -12,7 +12,7 @@
         }
 
         const currentUrl = new URL(window.location.href);
-        const redirectUri = new URL('/auth', currentUrl.origin);
+        const redirectUri = new URL('/_/auth/login', currentUrl.origin);
 
         const authUrl = new URL(auth_url);
         const state = rand_nonce();

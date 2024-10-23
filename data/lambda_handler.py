@@ -63,7 +63,7 @@ def gen_signature():
 def kv_to_cookies(headers):
     cookies = []
     for k, v in headers.items():
-        cookies.append(f"{k}={v}; Secure; HttpOnly")
+        cookies.append(f"{k}={v}; Secure; HttpOnly; Path=/")
     return cookies
 
 

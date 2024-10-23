@@ -107,7 +107,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
     cache_policy_id        = local.CFCachePolicy_CachingDisabled
-    path_pattern           = "_/auth/redir"
+    path_pattern           = "/"
     viewer_protocol_policy = "redirect-to-https"
     target_origin_id       = local.cf_target_origin_id
   }
@@ -117,7 +117,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     cached_methods           = ["GET", "HEAD"]
     cache_policy_id          = local.CFCachePolicy_CachingDisabled
     origin_request_policy_id = local.CFOriginRequestPolicy_AllViewerHost
-    path_pattern             = "auth"
+    path_pattern             = "/_/auth/login"
     viewer_protocol_policy   = "redirect-to-https"
     target_origin_id         = "auth"
   }
@@ -127,7 +127,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     cached_methods           = ["GET", "HEAD"]
     cache_policy_id          = local.CFCachePolicy_CachingDisabled
     origin_request_policy_id = local.CFOriginRequestPolicy_AllViewerHost
-    path_pattern             = "_/link/create"
+    path_pattern             = "/_/link/create"
     viewer_protocol_policy   = "redirect-to-https"
     target_origin_id         = "link"
     trusted_key_groups         = [aws_cloudfront_key_group.signing.id]
