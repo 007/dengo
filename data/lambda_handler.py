@@ -15,6 +15,7 @@ oidc_client_id = os.getenv("OIDC_CLIENT_ID", "TODO:REPLACEME")
 region = os.getenv("AWS_REGION", os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
 secret_path = os.getenv("SIGNING_KEY_SECRET_PATH", "TODO:REPLACEME")
 signature_expiration_days = int(os.getenv("SIGNATURE_EXPIRATION_DAYS", 1))
+link_bucket = os.getenv("LINK_BUCKET", "dengo-links")
 
 
 def load_cf_signing_key():
@@ -73,6 +74,21 @@ def encode_identity_cookie(identity):
     return {"Dengo-Identity": cloudfront_urlsafe_b64(sig_data)}
 
 
+def decode_identity_cookie(cookie):
+    if cookie is None:
+        return None
+
+    sig_data = json.loads(base64.b64decode(cookie))
+    identity = sig_data["identity"].encode()
+    signature = base64.b64decode(sig_data["signature"])
+    try:
+        if rsa.verify(identity, signature, signing_key) == "SHA-1":
+            return identity.decode()
+    except rsa.pkcs1.VerificationError:
+        pass
+    return None
+
+
 def set_redirect(request):
     params = urllib.parse.parse_qs(request.get("rawQueryString", ""))
     return_target = params.get("target_path", [""])[0]
@@ -94,6 +110,68 @@ def check_oidc_auth(jwt_data):
         pass
 
     return None
+
+
+def find_cookie(event, find_name):
+    cookies = event.get("cookies", [])
+    for cookie in cookies:
+        cookie_name, value = cookie.split("=", 1)
+        if cookie_name == find_name:
+            return value
+    return None
+
+
+def link_handler(event, context):
+    response = {"statusCode": 403, "body": "Invalid link or you are not owner"}
+    update_or_create = "failed"
+    identity_cookie = find_cookie(event, "Dengo-Identity")
+    identity = decode_identity_cookie(identity_cookie)
+    if identity is not None:
+        print(event)
+        link_name = event.get("queryStringParameters", {}).get("name", "")
+        session = boto3.session.Session()
+        s3_client = session.client(service_name="s3", region_name=region)
+
+        ownership_verified = False
+
+        try:
+            s3_client.head_object(Bucket=link_bucket, Key=link_name)
+        except ClientError as e:
+            ownership_verified = True
+            update_or_create = "created"
+
+        if not ownership_verified:
+            tags = s3_client.get_object_tagging(Bucket=link_bucket, Key=link_name).get("TagSet", [])
+
+            for tag in tags:
+                if tag["Key"] == "DengoOwner" and tag["Value"] == identity:
+                    update_or_create = "updated"
+                    ownership_verified = True
+                    break
+
+        # object doesn't exist, or user is the owner
+        # we can take ownership and publish the link
+        if ownership_verified:
+            link_url = event.get("queryStringParameters", {}).get("url", "")
+            link_body = f'Redirecting to <a href="{link_url}">{link_url}</a>'
+            s3_client.put_object(
+                Body=link_body,
+                Bucket=link_bucket,
+                Key=link_name,
+                WebsiteRedirectLocation=link_url,
+                Tagging="DengoOwner=" + identity,
+            )
+            body_json = json.dumps(
+                {
+                    "url": link_url,
+                    "short": link_name,
+                    "owner": identity,
+                    "status": update_or_create,
+                    "message": f"Link {link_name} {update_or_create} for {link_url}",
+                }
+            )
+            response = {"statusCode": 200, "body": body_json}
+    return response
 
 
 def auth_handler(event, context):

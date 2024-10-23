@@ -62,10 +62,19 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     connection_timeout  = 2
     domain_name         = regex("(?:https://)([^/?#]*)", aws_lambda_function_url.auth.function_url)[0]
     origin_id           = "auth"
-    custom_header {
-      name  = "User-Agent"
-      value = random_id.bucket_access_header.hex
+  }
+
+  origin {
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
     }
+    connection_attempts = 3
+    connection_timeout  = 2
+    domain_name         = regex("(?:https://)([^/?#]*)", aws_lambda_function_url.link.function_url)[0]
+    origin_id           = "link"
   }
 
   aliases             = [var.domain_name]
@@ -111,6 +120,17 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     path_pattern             = "auth"
     viewer_protocol_policy   = "redirect-to-https"
     target_origin_id         = "auth"
+  }
+
+  ordered_cache_behavior {
+    allowed_methods          = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+    cached_methods           = ["GET", "HEAD"]
+    cache_policy_id          = local.CFCachePolicy_CachingDisabled
+    origin_request_policy_id = local.CFOriginRequestPolicy_AllViewerHost
+    path_pattern             = "link"
+    viewer_protocol_policy   = "redirect-to-https"
+    target_origin_id         = "link"
+    trusted_key_groups         = [aws_cloudfront_key_group.signing.id]
   }
 
   restrictions {
