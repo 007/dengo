@@ -36,7 +36,10 @@ def load_jwks_keys():
 
 
 ### exec at init
-cloudfront_signing_translation = str.maketrans("+=/", "-_~")
+tr_from = "+=/"
+tr_to = "-_~"
+urlsafe_b64 = str.maketrans(tr_from, tr_to)
+urlsafe_b64_invert = str.maketrans(tr_to, tr_from)
 signing_key = load_cf_signing_key()
 jwks_client = load_jwks_keys()
 ### exec at init
@@ -44,7 +47,7 @@ jwks_client = load_jwks_keys()
 
 def cloudfront_urlsafe_b64(thing):
     b64_string = base64.b64encode(thing).decode()
-    return b64_string.translate(cloudfront_signing_translation)
+    return b64_string.translate(urlsafe_b64)
 
 
 def gen_signature():
@@ -78,6 +81,7 @@ def decode_identity_cookie(cookie):
     if cookie is None:
         return None
 
+    cookie = cookie.translate(urlsafe_b64_invert)
     sig_data = json.loads(base64.b64decode(cookie))
     identity = sig_data["identity"].encode()
     signature = base64.b64decode(sig_data["signature"])
