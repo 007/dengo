@@ -60,7 +60,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
     connection_attempts = 3
     connection_timeout  = 2
-    domain_name         = regex("(?:https://)([^/?#]*)", aws_lambda_function_url.auth.function_url)[0]
+    domain_name         = regex("(?:https://)([^/?#]*)", aws_lambda_function_url.goto["auth"].function_url)[0]
     origin_id           = "auth"
   }
 
@@ -73,7 +73,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
     connection_attempts = 3
     connection_timeout  = 2
-    domain_name         = regex("(?:https://)([^/?#]*)", aws_lambda_function_url.link.function_url)[0]
+    domain_name         = regex("(?:https://)([^/?#]*)", aws_lambda_function_url.goto["link"].function_url)[0]
     origin_id           = "link"
   }
 
@@ -130,7 +130,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     path_pattern             = "/_/link/create"
     viewer_protocol_policy   = "redirect-to-https"
     target_origin_id         = "link"
-    trusted_key_groups         = [aws_cloudfront_key_group.signing.id]
+    trusted_key_groups       = [aws_cloudfront_key_group.signing.id]
   }
 
   restrictions {

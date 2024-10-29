@@ -6,7 +6,7 @@ locals {
   }
   link_hrefs    = [for k, v in local.links : "    <tr><td><a href=\"/${k}\">${k}</a></td><td><a href=\"${v}\">${v}</a></td></tr>"]
   index_table   = "  <table>\n${join("\n", local.link_hrefs)}\n  </table>"
-  edit_link = "<h2><a href=\"/_/link/edit\">Create or edit a link</a></h2>"
+  edit_link     = "<h2><a href=\"/_/link/edit\">Create or edit a link</a></h2>"
   index_content = "<html>\n<head><title>index</title></head>\n<body>\n${local.edit_link}\n${local.index_table}\n</body>\n</html>"
 }
 
@@ -42,5 +42,5 @@ resource "aws_s3_object" "link_edit" {
 
   key          = "_/link/edit"
   content_type = "text/html"
-  content = file("${path.module}/data/link_edit.html")
+  content      = file("${path.module}/data/link_edit.html")
 }

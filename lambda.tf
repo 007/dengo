@@ -1,3 +1,7 @@
+locals {
+  function_handlers = toset(["auth", "link"])
+}
+
 data "aws_iam_policy_document" "lambda_assumerole" {
   statement {
     sid     = "LambdaEdgeAssumeRole"
@@ -54,11 +58,12 @@ resource "random_id" "lambda" {
   byte_length = 8
 }
 
-resource "aws_lambda_function" "auth" {
+resource "aws_lambda_function" "goto" {
+  for_each         = local.function_handlers
   filename         = "${path.module}/data/lambda_handler.zip"
-  function_name    = "${random_id.lambda.hex}-auth"
+  function_name    = "${random_id.lambda.hex}-${each.key}"
   role             = aws_iam_role.lambda_role.arn
-  handler          = "lambda_handler.auth_handler"
+  handler          = "lambda_handler.${each.key}_handler"
   source_code_hash = filebase64sha256("${path.module}/data/lambda_handler.zip")
   runtime          = "python3.12"
   publish          = true
@@ -66,54 +71,11 @@ resource "aws_lambda_function" "auth" {
   environment {
     variables = {
       JWKS_URI                  = local.resolved_oidc_config.jwks_uri
-      OIDC_CLIENT_ID            = var.oidc_client_id
-      SIGNATURE_EXPIRATION_DAYS = var.signature_expiration_days
-      SIGNING_KEY_ID            = aws_cloudfront_public_key.signing[var.current_key].id
-      SIGNING_KEY_SECRET_PATH   = aws_secretsmanager_secret.signing.arn
-    }
-  }
-  timeout       = 10
-  memory_size   = 128
-  architectures = ["arm64"]
-}
-
-resource "aws_lambda_alias" "auth" {
-  name             = "cloudfront"
-  function_name    = aws_lambda_function.auth.function_name
-  function_version = aws_lambda_function.auth.version
-}
-
-resource "aws_lambda_function_url" "auth" {
-  function_name      = aws_lambda_function.auth.function_name
-  qualifier          = aws_lambda_alias.auth.name
-  authorization_type = "NONE"
-}
-
-resource "aws_cloudwatch_log_group" "auth" {
-  name              = "/aws/lambda/${aws_lambda_function.auth.function_name}"
-  retention_in_days = 7
-  lifecycle {
-    prevent_destroy = false
-  }
-}
-
-resource "aws_lambda_function" "link" {
-  filename         = "${path.module}/data/lambda_handler.zip"
-  function_name    = "${random_id.lambda.hex}-link"
-  role             = aws_iam_role.lambda_role.arn
-  handler          = "lambda_handler.link_handler"
-  source_code_hash = filebase64sha256("${path.module}/data/lambda_handler.zip")
-  runtime          = "python3.12"
-  publish          = true
-
-  environment {
-    variables = {
-      JWKS_URI                  = local.resolved_oidc_config.jwks_uri
-      OIDC_CLIENT_ID            = var.oidc_client_id
-      SIGNATURE_EXPIRATION_DAYS = var.signature_expiration_days
-      SIGNING_KEY_ID            = aws_cloudfront_public_key.signing[var.current_key].id
-      SIGNING_KEY_SECRET_PATH   = aws_secretsmanager_secret.signing.arn
       LINK_BUCKET               = aws_s3_bucket.origin.bucket
+      OIDC_CLIENT_ID            = var.oidc_client_id
+      SIGNATURE_EXPIRATION_DAYS = var.signature_expiration_days
+      SIGNING_KEY_ID            = aws_cloudfront_public_key.signing[var.current_key].id
+      SIGNING_KEY_SECRET_PATH   = aws_secretsmanager_secret.signing.arn
     }
   }
   timeout       = 10
@@ -121,20 +83,23 @@ resource "aws_lambda_function" "link" {
   architectures = ["arm64"]
 }
 
-resource "aws_lambda_alias" "link" {
-  name             = "cloudfront"
-  function_name    = aws_lambda_function.link.function_name
-  function_version = aws_lambda_function.link.version
+resource "aws_lambda_alias" "goto" {
+  for_each         = local.function_handlers
+  name             = "cloudfront-${each.key}"
+  function_name    = aws_lambda_function.goto[each.key].function_name
+  function_version = aws_lambda_function.goto[each.key].version
 }
 
-resource "aws_lambda_function_url" "link" {
-  function_name      = aws_lambda_function.link.function_name
-  qualifier          = aws_lambda_alias.link.name
+resource "aws_lambda_function_url" "goto" {
+  for_each           = local.function_handlers
+  function_name      = aws_lambda_function.goto[each.key].function_name
+  qualifier          = aws_lambda_alias.goto[each.key].name
   authorization_type = "NONE"
 }
 
-resource "aws_cloudwatch_log_group" "link" {
-  name              = "/aws/lambda/${aws_lambda_function.link.function_name}"
+resource "aws_cloudwatch_log_group" "goto" {
+  for_each          = local.function_handlers
+  name              = "/aws/lambda/${aws_lambda_function.goto[each.key].function_name}"
   retention_in_days = 7
   lifecycle {
     prevent_destroy = false
