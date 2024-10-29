@@ -1,5 +1,5 @@
 locals {
-  function_handlers = toset(["auth", "link"])
+  function_handlers = toset(["auth", "link", "index"])
 }
 
 data "aws_iam_policy_document" "lambda_assumerole" {

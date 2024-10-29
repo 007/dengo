@@ -3,6 +3,13 @@ resource "aws_s3_bucket" "origin" {
   force_destroy = true
 }
 
+resource "aws_s3_bucket_versioning" "origin" {
+  bucket = aws_s3_bucket.origin.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_website_configuration" "origin" {
   bucket = aws_s3_bucket.origin.id
 

@@ -213,3 +213,46 @@ def auth_handler(event, context):
             }
 
     return response
+
+
+def index_handler(event, context):
+    # enumerate S3 bucket contents (any object with DengoOwner tag)
+    session = boto3.session.Session()
+    s3_client = session.client(service_name="s3", region_name=region)
+    links = []
+    try:
+        objects = s3_client.list_objects_v2(Bucket=link_bucket)
+        for obj in objects.get("Contents", []):
+            tags = s3_client.get_object_tagging(Bucket=link_bucket, Key=obj["Key"]).get("TagSet", [])
+            for tag in tags:
+                if tag["Key"] == "DengoOwner":
+                    links.append(
+                        {
+                            "name": obj["Key"],
+                            "owner": tag["Value"],
+                            "url": s3_client.get_object(Bucket=link_bucket, Key=obj["Key"]).get("WebsiteRedirectLocation", ""),
+                        }
+                    )
+    except ClientError as e:
+        pass
+
+    # sort links by name
+    links = sorted(links, key=lambda x: x["name"])
+
+    # render HTML index
+    index_html = "<html>\n<head><title>index</title></head>\n<body>\n"
+    index_html += '  <h2><a href="/_/link/edit">Create or edit a link</a></h2>\n'
+    index_html += "  <h1>Links</h1>\n"
+    index_html += "  <table>\n"
+    index_html += "    <thead><tr><th>Link</th><th>URL</th><th>Owner</th></tr></thead>\n"
+    index_html += "    <tbody>\n"
+    for link in links:
+        index_html += f'      <tr><td><a href="/{link["name"]}">{link["name"]}</a></td><td>{link["url"]}</td><td>{link["owner"]}</td></tr>\n'
+    index_html += "    </tbody>\n"
+    index_html += "  </table>"
+    index_html += "  <h4>Last updated: " + time.strftime("%Y-%m-%d %H:%M:%S") + "</h4>\n"
+    index_html += "</body>\n</html>"
+    s3_client.put_object(Body=index_html, Bucket=link_bucket, Key="index.html", ContentType="text/html")
+
+    response = {"statusCode": 302, "headers": {"Location": "/"}, "body": "Index rebuilt, redirecting..."}
+    return response
