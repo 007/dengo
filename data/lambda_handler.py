@@ -93,11 +93,11 @@ def decode_identity_cookie(cookie):
     return None
 
 
-def set_redirect(request):
-    params = urllib.parse.parse_qs(request.get("rawQueryString", ""))
-    return_target = params.get("target_path", [""])[0]
-    if return_target.startswith("/"):
-        return_target = return_target[1:]
+def set_redirect(state):
+    state = base64.b64decode(state + "==").decode()
+    redirect_data = json.loads(state)
+    return_target = redirect_data.get("target", "")
+    return_target = return_target.strip("/")
     return_target_safe = urllib.parse.quote(return_target)
     return f"/{return_target_safe}"
 
@@ -205,7 +205,7 @@ def auth_handler(event, context):
             response = {
                 "statusCode": 302,
                 "headers": {
-                    "Location": set_redirect(event),
+                    "Location": set_redirect(post_data.get("state", "")),
                 },
                 "body": "",
                 "cookies": kv_to_cookies(cookies),

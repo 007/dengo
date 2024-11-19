@@ -15,7 +15,7 @@
         const redirectUri = new URL('/_/auth/login', currentUrl.origin);
 
         const authUrl = new URL(auth_url);
-        const state = rand_nonce();
+        const state = btoa(JSON.stringify({target:currentUrl.pathname})).replace(/=+$/, '');
         const nonce = rand_nonce();
 
         authUrl.searchParams.set('response_type', 'id_token');
@@ -25,9 +25,6 @@
         authUrl.searchParams.set('scope', 'openid email');
         authUrl.searchParams.set('state', state);
         authUrl.searchParams.set('nonce', nonce);
-
-        sessionStorage.setItem('oidc_state', state);
-        sessionStorage.setItem('oidc_nonce', nonce);
 
         window.location.href = authUrl.toString();
       })();
