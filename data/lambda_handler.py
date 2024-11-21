@@ -240,19 +240,36 @@ def index_handler(event, context):
     links = sorted(links, key=lambda x: x["name"])
 
     # render HTML index
-    index_html = "<html>\n<head><title>index</title></head>\n<body>\n"
-    index_html += '  <h2><a href="/_/link/edit">Create or edit a link</a></h2>\n'
-    index_html += "  <h1>Links</h1>\n"
-    index_html += "  <table>\n"
-    index_html += "    <thead><tr><th>Link</th><th>URL</th><th>Owner</th></tr></thead>\n"
-    index_html += "    <tbody>\n"
+    index_html = []
+
+    index_html.append('<html lang="en">')
+    index_html.append("<head>")
+    index_html.append("  <title>index</title>")
+    index_html.append("  <style>")
+    index_html.append("    body { font-family: sans-serif; padding:8px; }")
+    index_html.append("    table { border-collapse: collapse; }")
+    index_html.append("    th, td { border-bottom: 1px solid #000; padding: 12px; white-space: nowrap; }")
+    index_html.append("    table tr:nth-child(odd) { background:#fff; }")
+    index_html.append("    table tr:nth-child(even) { background:#ddd; }")
+    index_html.append("  </style>")
+    index_html.append("</head>")
+    index_html.append("<body>")
+    index_html.append('  <h3><a href="/_/link/edit">Create or edit a link</a></h3>')
+    index_html.append("  <h1>Links</h1>")
+
+    index_html.append("  <table>")
+    index_html.append("    <thead><tr><th>Link</th><th>Owner</th><th>URL</th></tr></thead>")
+    index_html.append("    <tbody>")
     for link in links:
-        index_html += f'      <tr><td><a href="/{link["name"]}">{link["name"]}</a></td><td>{link["url"]}</td><td>{link["owner"]}</td></tr>\n'
-    index_html += "    </tbody>\n"
-    index_html += "  </table>"
-    index_html += "  <h4>Last updated: " + time.strftime("%Y-%m-%d %H:%M:%S") + "</h4>\n"
-    index_html += "</body>\n</html>"
-    s3_client.put_object(Body=index_html, Bucket=link_bucket, Key="index.html", ContentType="text/html")
+        index_html.append(f'      <tr><td><a href="/{link["name"]}">{link["name"]}</a></td><td>{link["owner"]}</td><td>{link["url"]}</td></tr>')
+    index_html.append("    </tbody>")
+    index_html.append("  </table>")
+
+    index_html.append("  <h4>Last updated: " + time.strftime("%Y-%m-%d %H:%M:%S") + "</h4>")
+    index_html.append("</body>")
+    index_html.append("</html>")
+
+    s3_client.put_object(Body="\n".join(index_html), Bucket=link_bucket, Key="index.html", ContentType="text/html")
 
     response = {"statusCode": 302, "headers": {"Location": "/"}, "body": "Index rebuilt, redirecting..."}
     return response
