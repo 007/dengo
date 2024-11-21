@@ -157,8 +157,8 @@ def link_handler(event, context):
         try:
             s3_client.head_object(Bucket=link_bucket, Key=link_name)
         except ClientError as e:
-            ownership_verified = True
             update_or_create = "created"
+            ownership_verified = True
 
         if not ownership_verified:
             tags = s3_client.get_object_tagging(Bucket=link_bucket, Key=link_name).get("TagSet", [])
@@ -181,16 +181,21 @@ def link_handler(event, context):
                 WebsiteRedirectLocation=link_url,
                 Tagging="DengoOwner=" + identity,
             )
-            body_json = json.dumps(
-                {
-                    "url": link_url,
-                    "short": link_name,
-                    "owner": identity,
-                    "status": update_or_create,
-                    "message": f"Link {link_name} {update_or_create} for {link_url}",
-                }
-            )
-            response = {"statusCode": 200, "body": body_json}
+            body_html = []
+            body_html.append('<html lang="en">')
+            body_html.append("<head>")
+            body_html.append(f'  <meta http-equiv="refresh" content="0;url=/_/link/index">')
+            body_html.append(f"  <title>Link {link_name} {update_or_create}</title>")
+            body_html.append("</head>")
+            body_html.append("<body>")
+            body_html.append(f"  <p>Link {update_or_create} for {link_name} successfully, rebuilding index...</p>")
+            body_html.append("</body>")
+            body_html.append("</html>")
+            response = {
+                "statusCode": 200,
+                "headers": {"Content-Type": "text/html"},
+                "body": "\n".join(body_html),
+            }
     return response
 
 
