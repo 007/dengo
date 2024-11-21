@@ -1,10 +1,12 @@
 import base64
+import concurrent.futures
 import json
 import os
 import time
 import urllib
 
 import boto3
+import botocore.config
 import jwt
 import rsa
 from botocore.exceptions import ClientError
@@ -16,11 +18,18 @@ region = os.getenv("AWS_REGION", os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
 secret_path = os.getenv("SIGNING_KEY_SECRET_PATH", "TODO:REPLACEME")
 signature_expiration_days = int(os.getenv("SIGNATURE_EXPIRATION_DAYS", 1))
 link_bucket = os.getenv("LINK_BUCKET", "dengo-links")
+boto_max_pool = int(os.getenv("BOTO_MAX_POOL", 16))
+
+global_boto_session = boto3.session.Session()
+s3_client = global_boto_session.client(
+    service_name="s3",
+    region_name=region,
+    config=botocore.config.Config(max_pool_connections=boto_max_pool),
+)
 
 
 def load_cf_signing_key():
-    session = boto3.session.Session()
-    sm_client = session.client(service_name="secretsmanager", region_name=region)
+    sm_client = global_boto_session.client(service_name="secretsmanager", region_name=region)
     try:
         get_secret_value_response = sm_client.get_secret_value(SecretId=secret_path)
     except ClientError as e:
@@ -149,9 +158,6 @@ def link_handler(event, context):
     if identity is not None:
         post_data = event_post_data(event)
         link_name = post_data.get("name", "")
-        session = boto3.session.Session()
-        s3_client = session.client(service_name="s3", region_name=region)
-
         ownership_verified = False
 
         try:
@@ -220,26 +226,32 @@ def auth_handler(event, context):
     return response
 
 
+def get_object_metadata(s3_client, link_bucket, obj_key):
+    try:
+        for tag in s3_client.get_object_tagging(Bucket=link_bucket, Key=obj_key).get("TagSet", []):
+            if tag["Key"] == "DengoOwner":
+                owner_tag = tag["Value"]
+                obj = s3_client.head_object(Bucket=link_bucket, Key=obj_key)
+                redirect_url = obj.get("WebsiteRedirectLocation", "/")
+                return {"name": obj_key, "owner": owner_tag, "url": redirect_url}
+    except ClientError:
+        # silently ignore errors
+        pass
+    return None
+
+
 def index_handler(event, context):
     # enumerate S3 bucket contents (any object with DengoOwner tag)
-    session = boto3.session.Session()
-    s3_client = session.client(service_name="s3", region_name=region)
     links = []
     try:
         objects = s3_client.list_objects_v2(Bucket=link_bucket)
-        for obj in objects.get("Contents", []):
-            tags = s3_client.get_object_tagging(Bucket=link_bucket, Key=obj["Key"]).get("TagSet", [])
-            for tag in tags:
-                if tag["Key"] == "DengoOwner":
-                    links.append(
-                        {
-                            "name": obj["Key"],
-                            "owner": tag["Value"],
-                            "url": s3_client.get_object(Bucket=link_bucket, Key=obj["Key"]).get("WebsiteRedirectLocation", ""),
-                        }
-                    )
-    except ClientError as e:
-        pass
+        # Create futures for each object, then filter out None results for failures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=boto_max_pool) as executor:
+            futures = [executor.submit(get_object_metadata, s3_client, link_bucket, obj["Key"]) for obj in objects.get("Contents", [])]
+        links = [future.result() for future in concurrent.futures.as_completed(futures) if future.result() is not None]
+
+    except ClientError:
+        links = []
 
     # sort links by name
     links = sorted(links, key=lambda x: x["name"])

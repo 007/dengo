@@ -1,5 +1,13 @@
 locals {
-  function_handlers = toset(["auth", "link", "index"])
+  function_handlers = {
+    "auth" : {},
+    "link" : {},
+    "index" : {
+      boto_pool   = 256
+      memory_size = 2048
+      timeout     = 30
+    },
+  }
 }
 
 data "aws_iam_policy_document" "lambda_assumerole" {
@@ -76,10 +84,11 @@ resource "aws_lambda_function" "goto" {
       SIGNATURE_EXPIRATION_DAYS = var.signature_expiration_days
       SIGNING_KEY_ID            = aws_cloudfront_public_key.signing[var.current_key].id
       SIGNING_KEY_SECRET_PATH   = aws_secretsmanager_secret.signing.arn
+      BOTO_MAX_POOL             = lookup(each.value, "boto_pool", 16)
     }
   }
-  timeout       = 10
-  memory_size   = 128
+  timeout       = lookup(each.value, "timeout", 10)
+  memory_size   = lookup(each.value, "memory_size", 128)
   architectures = ["arm64"]
 }
 
