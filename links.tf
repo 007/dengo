@@ -12,7 +12,7 @@ locals {
 resource "aws_s3_object" "index_html" {
   bucket = aws_s3_bucket.origin.id
 
-  key          = "index.html"
+  key          = "_/index.html"
   content_type = "text/html"
   content      = local.index_content
 
@@ -35,7 +35,7 @@ resource "aws_s3_object" "auth_redir" {
 resource "aws_s3_object" "error_html" {
   bucket = aws_s3_bucket.origin.id
 
-  key          = "error.html"
+  key          = "_/error.html"
   content_type = "text/html"
   content      = file("${path.module}/data/link_edit.html")
 }

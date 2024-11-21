@@ -274,7 +274,7 @@ def index_handler(event, context):
     index_html.append("</body>")
     index_html.append("</html>")
 
-    s3_client.put_object(Body="\n".join(index_html), Bucket=link_bucket, Key="index.html", ContentType="text/html")
+    s3_client.put_object(Body="\n".join(index_html), Bucket=link_bucket, Key="_/index.html", ContentType="text/html")
 
     response = {"statusCode": 302, "headers": {"Location": "/"}, "body": "Index rebuilt, redirecting..."}
     return response

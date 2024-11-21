@@ -18,7 +18,7 @@ resource "aws_s3_bucket_website_configuration" "origin" {
   }
 
   error_document {
-    key = "error.html"
+    key = "_/error.html"
   }
 }
 
